@@ -1,0 +1,49 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "stratus-stack-app",
+	"compatibility_date": "2025-09-24",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "@tanstack/react-start/server-entry",
+	"vars": {
+		"MY_VAR": "Hello from Cloudflare"
+		// Better Auth settings
+		// BETTER_AUTH_URL should be set to the deployment URL (e.g., "https://your-app.workers.dev")
+		// For local dev, it will default to localhost
+		// "BETTER_AUTH_URL": "http://localhost:5173",
+		// Add your Sentry DSN here or via secrets: wrangler secret put SENTRY_DSN
+		// "SENTRY_DSN": "your-sentry-dsn"
+	},
+	// Secrets to be added via `wrangler secret put`:
+	// - BETTER_AUTH_SECRET: Random 32+ char string for cookie encryption
+	// - DISCORD_CLIENT_ID: Discord OAuth application client ID
+	// - DISCORD_CLIENT_SECRET: Discord OAuth application client secret
+	// KV namespace for Better Auth secondary storage (sessions, rate limits)
+	// Create with: wrangler kv namespace create AUTH_KV
+	// For preview: wrangler kv namespace create AUTH_KV --preview
+	"kv_namespaces": [
+		{
+			"binding": "AUTH_KV",
+			"id": "YOUR_KV_NAMESPACE_ID",
+			"preview_id": "YOUR_PREVIEW_KV_NAMESPACE_ID"
+		}
+	],
+	// D1 database for Drizzle ORM
+	// Create with: wrangler d1 create stratus-db
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "stratus-db",
+			"database_id": "YOUR_D1_DATABASE_ID",
+			"migrations_dir": "./drizzle"
+		}
+	],
+	// Required for Sentry release tracking
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
+	},
+	"assets": {
+		"binding": "ASSETS",
+		"run_worker_first": ["/api/*"],
+		"not_found_handling": "none"
+	}
+}

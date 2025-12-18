@@ -1,0 +1,32 @@
+# Better Auth Configuration
+# Generate a random 32+ character secret: openssl rand -base64 32
+BETTER_AUTH_SECRET=your-secret-here-at-least-32-characters
+
+# Better Auth URL (optional - defaults to request origin)
+# Set this to your deployment URL in production
+# BETTER_AUTH_URL=http://localhost:5173
+
+# Discord OAuth Configuration
+# Create an application at https://discord.com/developers/applications
+# Add redirect URL: http://localhost:5173/api/auth/callback/discord
+DISCORD_CLIENT_ID=your-discord-client-id
+DISCORD_CLIENT_SECRET=your-discord-client-secret
+
+# Sentry DSN (optional)
+# VITE_SENTRY_DSN=your-sentry-dsn
+# SENTRY_DSN=your-sentry-dsn
+
+# ============================================
+# KV Namespace Setup (for secondary storage)
+# ============================================
+# The AUTH_KV namespace is configured in wrangler.jsonc.
+# For local development, wrangler automatically creates a local KV store.
+#
+# For production, create the KV namespace:
+#   wrangler kv namespace create AUTH_KV
+#
+# Then update wrangler.jsonc with the returned ID:
+#   "kv_namespaces": [{ "binding": "AUTH_KV", "id": "your-namespace-id" }]
+#
+# For preview environments:
+#   wrangler kv namespace create AUTH_KV --preview
