@@ -1,6 +1,14 @@
 /// <reference types="vite/client" />
 
-import { AppShell, ColorSchemeScript, MantineProvider } from '@mantine/core';
+import {
+	AppShell,
+	ColorSchemeScript,
+	createTheme,
+	DEFAULT_THEME,
+	MantineProvider,
+	mantineHtmlProps,
+	mergeMantineTheme,
+} from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 import { NavigationProgress } from '@mantine/nprogress';
@@ -22,6 +30,35 @@ import { getSessionFn, type SessionData } from '~/server/auth/session';
 import type { AppRouter } from '~/server/trpc/router';
 import appCss from '~/styles/app.css?url';
 
+const theme = mergeMantineTheme(
+	DEFAULT_THEME,
+	createTheme({
+		fontFamily: `Inter, ${DEFAULT_THEME.fontFamily}`,
+		primaryColor: 'teal',
+		primaryShade: { light: 7, dark: 5 },
+		defaultRadius: 'lg',
+		components: {
+			Card: {
+				defaultProps: {
+					shadow: 'sm',
+					radius: 'lg',
+				},
+			},
+			Paper: {
+				defaultProps: {
+					shadow: 'xs',
+					radius: 'lg',
+				},
+			},
+			Button: {
+				defaultProps: {
+					radius: 'md',
+				},
+			},
+		},
+	})
+);
+
 export interface RouterAppContext {
 	trpc: TRPCOptionsProxy<AppRouter>;
 	queryClient: QueryClient;
@@ -40,7 +77,6 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 	 * Fetch auth session before loading the route tree
 	 *
 	 * Uses createServerFn for direct access to request headers during SSR.
-	 * Returns Discord user data (real Discord ID, avatar, etc.) cached in KV.
 	 */
 	beforeLoad: async (): Promise<AuthContext> => {
 		const session = await getSessionFn();
@@ -57,6 +93,16 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 			},
 		],
 		links: [
+			{ rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+			{
+				rel: 'preconnect',
+				href: 'https://fonts.gstatic.com',
+				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'stylesheet',
+				href: 'https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap',
+			},
 			{ rel: 'stylesheet', href: appCss },
 			{
 				rel: 'apple-touch-icon',
@@ -104,10 +150,10 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" data-mantine-color-scheme="dark" suppressHydrationWarning>
+		<html lang="en" {...mantineHtmlProps} suppressHydrationWarning>
 			<head>
 				<HeadContent />
-				<ColorSchemeScript defaultColorScheme="dark" />
+				<ColorSchemeScript defaultColorScheme="auto" />
 			</head>
 			<body>
 				<Providers>
@@ -123,7 +169,7 @@ function Providers({ children }: { children: React.ReactNode }) {
 	const { session } = Route.useRouteContext();
 
 	return (
-		<MantineProvider defaultColorScheme="dark">
+		<MantineProvider theme={theme} defaultColorScheme="auto">
 			<ModalsProvider labels={{ confirm: 'Confirm', cancel: 'Cancel' }}>
 				<Notifications position="top-right" limit={3} zIndex={2000} />
 				<NavigationProgress size={2} color="teal" />
