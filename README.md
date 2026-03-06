@@ -24,7 +24,7 @@ This is an opinionated stack designed for developer experience and performance:
 - **Cloudflare Workers** - Deploy your app to the edge for low latency and high scalability.
 - **Cloudflare D1** - SQLite database at the edge, powered by Drizzle ORM.
 - **tRPC** - Call your server functions directly from the client with full type safety.
-- **Better Auth** - Modern, stateless authentication that works seamlessly with Cloudflare.
+- **Better Auth** - Modern authentication with anonymous sign-in out of the box and easy social provider setup.
 - **Mantine UI** - A comprehensive component library that looks great out of the box.
 - **Sentry** - Error tracking and performance monitoring out of the box.
 - **Biome** - A single, fast tool for formatting and linting.
@@ -45,15 +45,14 @@ You'll need a few environment variables to get started. Copy the example file:
 cp .dev.vars.example .dev.vars
 ```
 
-| Variable                | Description                                                            |
-| :---------------------- | :--------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`    | A random string used for encryption (e.g., `openssl rand -base64 32`). |
-| `DISCORD_CLIENT_ID`     | Your Application ID from the Discord Developer Portal.                 |
-| `DISCORD_CLIENT_SECRET` | Your Client Secret from the Discord Developer Portal.                  |
-| `SENTRY_DSN`            | Your Sentry DSN for error tracking (optional).                         |
-| `SENTRY_ORG`            | Your Sentry organization slug (optional, for source maps).             |
-| `SENTRY_PROJECT`        | Your Sentry project slug (optional, for source maps).                  |
-| `SENTRY_AUTH_TOKEN`     | Your Sentry auth token (optional, for source maps).                    |
+| Variable             | Description                                                              |
+| :------------------- | :----------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET` | A random string used for encryption (e.g., `openssl rand -base64 32`).  |
+| `BETTER_AUTH_URL`    | Your deployment URL (optional — defaults to request origin in production). |
+| `SENTRY_DSN`         | Your Sentry DSN for error tracking (optional).                           |
+| `SENTRY_ORG`         | Your Sentry organization slug (optional, for source maps).               |
+| `SENTRY_PROJECT`     | Your Sentry project slug (optional, for source maps).                    |
+| `SENTRY_AUTH_TOKEN`  | Your Sentry auth token (optional, for source maps).                      |
 
 ### 2. Linting & Formatting
 
@@ -69,10 +68,21 @@ npm run check:fix
 
 ### 3. Auth Configuration
 
-1.  Go to the [Discord Developer Portal](https://discord.com/developers/applications).
-2.  Create a new application.
-3.  Add this Redirect URL in the OAuth2 settings: `http://localhost:5173/api/auth/callback/discord`
-4.  Copy the Client ID and Secret into your `.dev.vars` file.
+Anonymous sign-in works out of the box — no additional setup required.
+
+To add social providers (e.g., GitHub, Discord, Google), uncomment the relevant block in `src/server/auth/index.ts` and add the corresponding secrets to your `.dev.vars` file:
+
+```ts
+// src/server/auth/index.ts
+socialProviders: {
+  github: {
+    clientId: env.GITHUB_CLIENT_ID,
+    clientSecret: env.GITHUB_CLIENT_SECRET,
+  },
+},
+```
+
+See the [Better Auth docs](https://www.better-auth.com/docs/authentication/social-login) for a full list of supported providers.
 
 ### 4. Run the App
 
@@ -87,13 +97,14 @@ Your app should now be running at `http://localhost:5173`.
 
 Deploying to Cloudflare is straightforward:
 
-1.  **Create a KV Namespace** (used for session storage):
+1.  **Create a KV Namespace** (used for rate limiting):
 
     ```bash
     wrangler kv namespace create AUTH_KV
+    wrangler kv namespace create AUTH_KV --preview
     ```
 
-    Copy the ID returned by this command and update your `wrangler.jsonc` file.
+    Copy the IDs returned by these commands and update your `wrangler.jsonc` file.
 
 2.  **Create a D1 Database**:
 
@@ -103,16 +114,24 @@ Deploying to Cloudflare is straightforward:
 
     Copy the database ID into your `wrangler.jsonc` file.
 
-3.  **Deploy**:
+3.  **Run Migrations**:
+
+    ```bash
+    npm run db:migrate
+    ```
+
+4.  **Deploy**:
 
     ```bash
     npm run deploy
     ```
 
-4.  **Set Production Secrets**:
+5.  **Set Production Secrets**:
     ```bash
     wrangler secret put BETTER_AUTH_SECRET
-    # Repeat for DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET
+    # Add any social provider secrets here too, e.g.:
+    # wrangler secret put GITHUB_CLIENT_ID
+    # wrangler secret put GITHUB_CLIENT_SECRET
     ```
 
 ## Database
