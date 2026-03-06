@@ -21,11 +21,10 @@ export default withSentry(
 		enableLogs: true,
 	}),
 	{
-		async fetch(request: Request, env: Env, _ctx: ExecutionContext) {
-			// Build the request context with env and CF properties
-			const context = await buildRequestContext(request, env);
-			// Pass context to TanStack Start handler
-			return startEntry.fetch(request, { context });
+		async fetch(request: Request, _env: Env, _ctx: ExecutionContext) {
+			return startEntry.fetch(request, {
+				context: buildRequestContext(request),
+			});
 		},
 	} satisfies ExportedHandler<Env>
 );

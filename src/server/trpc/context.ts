@@ -7,7 +7,6 @@ import type { RequestContext } from '~/server/request-context';
  * TRPC Context type
  *
  * Contains:
- * - env: Cloudflare Worker environment bindings
  * - cf: Cloudflare request properties (geolocation, etc.)
  * - session: Better Auth session (null if not authenticated)
  * - user: Better Auth user (null if not authenticated)
@@ -21,12 +20,6 @@ export type TRPCContext = RequestContext & {
 	db: Database;
 };
 
-/**
- * Create TRPC context from request context
- *
- * Session is fetched lazily in procedures that need it,
- * or can be pre-fetched in the route handler if needed.
- */
 export const createTRPCContext = (
 	ctx: RequestContext,
 	session: Session | null,
