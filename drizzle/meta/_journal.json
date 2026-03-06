@@ -8,6 +8,13 @@
 			"when": 1766085732520,
 			"tag": "0000_greedy_darkhawk",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "6",
+			"when": 1772660331104,
+			"tag": "0001_loud_oracle",
+			"breakpoints": true
 		}
 	]
 }
