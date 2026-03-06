@@ -1,102 +1,87 @@
+import { env } from 'cloudflare:workers';
+import { getRequest } from '@tanstack/react-start/server';
 import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { anonymous } from 'better-auth/plugins';
 import { tanstackStartCookies } from 'better-auth/tanstack-start';
+import { withCloudflare } from 'better-auth-cloudflare';
+import { createDb } from '~/server/db';
 
 /**
- * Create Cloudflare KV-backed secondary storage for Better Auth
+ * Better Auth configuration with Cloudflare D1 + KV
  *
- * Used for:
- * - Session data caching (faster reads than cookie decryption)
- * - Rate limiting counters
+ * - D1: primary storage for users, sessions, accounts
+ * - KV: secondary storage for rate limiting
+ * - anonymous plugin: sign in without credentials (demo / onboarding)
+ * - TanStack Start cookie plugin must be last
  *
- * Note: KV has a minimum TTL of 60 seconds
+ * To add authentication methods, uncomment or add options below.
+ * See: https://www.better-auth.com/docs/authentication/email-password
  */
-function createKVSecondaryStorage(kv: KVNamespace) {
-	return {
-		get: async (key: string): Promise<string | null> => {
-			return kv.get(key);
-		},
-		set: async (key: string, value: string, ttl?: number): Promise<void> => {
-			if (ttl) {
-				// KV minimum TTL is 60 seconds
-				const kvTtl = Math.max(ttl, 60);
-				await kv.put(key, value, { expirationTtl: kvTtl });
-			} else {
-				await kv.put(key, value);
-			}
-		},
-		delete: async (key: string): Promise<void> => {
-			await kv.delete(key);
-		},
-	};
-}
+export function createAuth() {
+	const db = createDb();
+	const request = getRequest();
+	const cf = (request as Request & { cf?: IncomingRequestCfProperties }).cf;
 
-/**
- * Better Auth configuration for stateless OAuth-only authentication
- *
- * Key features:
- * - Stateless mode (no database) - session stored in encrypted cookie
- * - Cloudflare KV as secondary storage for session caching and rate limiting
- * - Discord OAuth as the sole authentication method
- * - Guilds scope for fetching user's Discord servers
- * - TanStack Start cookie plugin for proper cookie handling
- *
- * Note: Cookies may be large due to JWE-encrypted session/account data.
- * Better Auth automatically chunks cookies if they exceed 4KB.
- */
-export function createAuth(env: Env) {
 	return betterAuth({
-		// No database = automatic stateless mode
-		// Session is stored in encrypted JWE cookie
-		secret: env.BETTER_AUTH_SECRET,
-		baseURL: env.BETTER_AUTH_URL,
-		trustedOrigins: env.BETTER_AUTH_URL ? [env.BETTER_AUTH_URL] : [],
-
-		// Cloudflare KV secondary storage for session caching and rate limiting
-		secondaryStorage: createKVSecondaryStorage(env.AUTH_KV),
-
-		socialProviders: {
-			discord: {
-				clientId: env.DISCORD_CLIENT_ID,
-				clientSecret: env.DISCORD_CLIENT_SECRET,
-				// Request guilds scope to fetch user's servers
-				scope: ['identify', 'email', 'guilds'],
-			},
-		},
-
-		session: {
-			cookieCache: {
-				enabled: true,
-				maxAge: 7 * 24 * 60 * 60, // 7 days
-				strategy: 'jwe', // Encrypted JWT
-			},
-		},
-
-		account: {
-			// Store OAuth state in cookie (required for stateless)
-			storeStateStrategy: 'cookie',
-			// Store account data (access token, etc.) in cookie after OAuth flow
-			storeAccountCookie: true,
-		},
-
-		// Rate limiting using KV secondary storage
-		// Note: KV minimum TTL is 60 seconds, so window must be >= 60
-		rateLimit: {
-			enabled: true,
-			storage: 'secondary-storage',
-			window: 60, // 60 seconds (KV minimum TTL)
-			max: 100, // 100 requests per window
-			customRules: {
-				// Stricter limits for auth endpoints
-				'/sign-in/social': {
-					window: 60,
-					max: 10, // 10 sign-in attempts per minute
+		...withCloudflare(
+			{
+				kv: env.AUTH_KV,
+				cf: cf ?? undefined,
+				autoDetectIpAddress: true,
+				geolocationTracking: true,
+				d1: {
+					// biome-ignore lint/suspicious/noExplicitAny: withCloudflare expects a generic DrizzleD1Database
+					db: db as any,
+					options: { usePlural: true },
 				},
 			},
-		},
+			{
+				secret: env.BETTER_AUTH_SECRET,
+				baseURL: env.BETTER_AUTH_URL,
+				trustedOrigins: env.BETTER_AUTH_URL ? [env.BETTER_AUTH_URL] : [],
 
-		// TanStack Start cookie plugin must be LAST
-		plugins: [tanstackStartCookies()],
+				// Add authentication methods here.
+				// Example: email and password
+				// emailAndPassword: { enabled: true },
+
+				// Example: social providers
+				// socialProviders: {
+				// 	github: {
+				// 		clientId: env.GITHUB_CLIENT_ID,
+				// 		clientSecret: env.GITHUB_CLIENT_SECRET,
+				// 	},
+				// },
+
+				// Rate limiting via KV - window must be >= 60s (KV minimum TTL)
+				rateLimit: {
+					enabled: true,
+					storage: 'secondary-storage',
+					window: 60,
+					max: 100,
+				},
+
+				// TanStack Start cookie plugin must be LAST
+				plugins: [anonymous(), tanstackStartCookies()],
+			}
+		),
 	});
 }
+
+/**
+ * Static export for better-auth CLI schema generation.
+ * Run: pnpm dlx @better-auth/cli generate
+ * (plain betterAuth - no withCloudflare which requires CF context at import time)
+ */
+export const auth = betterAuth({
+	plugins: [anonymous()],
+	database: drizzleAdapter(
+		{},
+		{
+			provider: 'sqlite',
+			usePlural: true,
+		}
+	),
+});
 
 export type Auth = ReturnType<typeof createAuth>;

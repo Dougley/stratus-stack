@@ -1,4 +1,3 @@
-import { env } from 'cloudflare:workers';
 import * as Sentry from '@sentry/cloudflare';
 import { createFileRoute } from '@tanstack/react-router';
 import { createMiddleware } from '@tanstack/react-start';
@@ -17,21 +16,8 @@ import { appRouter } from '~/server/trpc/router';
  * into the TRPC context for use in procedures.
  */
 const handleRequest = async (request: Request, ctx: RequestContext) => {
-	// Get session from Better Auth
-	const auth = createAuth(ctx.env);
-	const sessionData = await auth.api.getSession({
+	const sessionData = await createAuth().api.getSession({
 		headers: request.headers,
-	});
-
-	// Create database instance
-	const db = createDb(ctx.env.DB);
-
-	// Debug logging for auth troubleshooting
-	console.log('[TRPC] Session fetch result:', {
-		hasSession: !!sessionData?.session,
-		hasUser: !!sessionData?.user,
-		userId: sessionData?.user?.id,
-		cookieHeader: `${request.headers.get('cookie')?.substring(0, 100)}...`,
 	});
 
 	return fetchRequestHandler({
@@ -44,13 +30,11 @@ const handleRequest = async (request: Request, ctx: RequestContext) => {
 				sessionData?.session ?? null,
 				sessionData?.user ?? null,
 				request.headers,
-				db
+				createDb()
 			),
 		onError: ({ path, error }) => {
 			console.error(`tRPC failed on ${path ?? '<no-path>'}:`, error);
-			Sentry.captureException(error, {
-				extra: { path },
-			});
+			Sentry.captureException(error, { extra: { path } });
 		},
 	});
 };
@@ -59,10 +43,7 @@ const requestContextMiddleware = createMiddleware({ type: 'request' }).server(
 	async ({ next, request }) => {
 		const cf = (request as Request & { cf?: IncomingRequestCfProperties }).cf;
 		return next({
-			context: {
-				env,
-				cf: cf ?? null,
-			} satisfies RequestContext,
+			context: { cf: cf ?? null } satisfies RequestContext,
 		});
 	}
 );

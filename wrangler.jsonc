@@ -15,8 +15,7 @@
 	},
 	// Secrets to be added via `wrangler secret put`:
 	// - BETTER_AUTH_SECRET: Random 32+ char string for cookie encryption
-	// - DISCORD_CLIENT_ID: Discord OAuth application client ID
-	// - DISCORD_CLIENT_SECRET: Discord OAuth application client secret
+	// - Add provider-specific secrets here (e.g. GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET)
 	// KV namespace for Better Auth secondary storage (sessions, rate limits)
 	// Create with: wrangler kv namespace create AUTH_KV
 	// For preview: wrangler kv namespace create AUTH_KV --preview

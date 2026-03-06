@@ -3,7 +3,6 @@ import {
 	Avatar,
 	Button,
 	Card,
-	Code,
 	Group,
 	Stack,
 	Text,
@@ -19,15 +18,13 @@ export function AuthCard() {
 	// Get session from AuthContext (populated by beforeLoad in __root.tsx)
 	const { user, isAuthenticated } = useAuth();
 
-	const handleLogin = async () => {
+	const handleAnonymousLogin = async () => {
 		setIsLoading(true);
 		try {
-			await signIn.social({
-				provider: 'discord',
-				callbackURL: '/',
-			});
+			await signIn.anonymous();
+			window.location.href = '/';
 		} catch (error) {
-			console.error('Login failed:', error);
+			console.error('Anonymous sign in failed:', error);
 			setIsLoading(false);
 		}
 	};
@@ -36,7 +33,6 @@ export function AuthCard() {
 		setIsLoading(true);
 		try {
 			await signOut();
-			// Reload to clear SSR session data
 			window.location.href = '/';
 		} catch (error) {
 			console.error('Logout failed:', error);
@@ -54,24 +50,13 @@ export function AuthCard() {
 				{isAuthenticated && user ? (
 					<>
 						<Group>
-							<Avatar
-								src={user.avatarUrl}
-								alt={user.globalName ?? user.username}
-								radius="xl"
-								size="lg"
-							/>
+							<Avatar src={user.image} alt={user.name} radius="xl" size="lg" />
 							<Stack gap={2}>
-								<Text fw={500}>{user.globalName ?? user.username}</Text>
+								<Text fw={500}>{user.name}</Text>
 								<Text size="sm" c="dimmed">
 									{user.email}
 								</Text>
 							</Stack>
-						</Group>
-						<Group gap="xs">
-							<Text size="sm" c="dimmed">
-								Discord ID:
-							</Text>
-							<Code>{user.id}</Code>
 						</Group>
 						<Button
 							variant="light"
@@ -84,23 +69,20 @@ export function AuthCard() {
 					</>
 				) : (
 					<>
-						<Text c="dimmed">
-							Sign in with Discord to access protected features.
-						</Text>
+						<Text c="dimmed">Sign in to access protected features.</Text>
 						<Button
-							variant="filled"
-							color="indigo"
-							onClick={handleLogin}
+							variant="light"
+							onClick={handleAnonymousLogin}
 							loading={isLoading}
 						>
-							Sign in with Discord
+							Continue as guest
 						</Button>
 					</>
 				)}
 
 				<Alert color="cyan" variant="light">
-					Uses Better Auth with stateless sessions (encrypted cookie, no
-					database). Auth data fetched during SSR.
+					Uses Better Auth with D1 for user/session storage. Configure
+					additional auth methods in <code>src/server/auth/index.ts</code>.
 				</Alert>
 			</Stack>
 		</Card>

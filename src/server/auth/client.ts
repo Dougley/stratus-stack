@@ -1,3 +1,4 @@
+import { anonymousClient } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
 
 /**
@@ -5,12 +6,12 @@ import { createAuthClient } from 'better-auth/react';
  *
  * Provides hooks and methods for authentication:
  * - useSession() - Access reactive session data
+ * - signIn.anonymous() - Sign in without credentials (demo / onboarding)
  * - signIn.social() - Initiate OAuth flow
  * - signOut() - End session
- * - getAccessToken() - Get OAuth provider access token for API calls
  */
 export const authClient = createAuthClient({
-	// Base URL is same domain, so not needed
+	plugins: [anonymousClient()],
 });
 
 // Re-export commonly used hooks and methods

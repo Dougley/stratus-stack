@@ -1,4 +1,3 @@
-import { env } from 'cloudflare:workers';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { getRequestHeaders } from '@tanstack/react-start/server';
 import {
@@ -23,9 +22,6 @@ import { appRouter } from './router';
  *
  * This pattern is essential for Cloudflare Workers where the server cannot
  * make HTTP requests back to itself during SSR.
- *
- * Server-side calls now have access to cookies via getRequestHeaders(),
- * enabling authenticated tRPC calls during SSR prefetch.
  */
 export const makeTRPCClient = createIsomorphicFn()
 	.server(() => {
@@ -35,38 +31,17 @@ export const makeTRPCClient = createIsomorphicFn()
 					router: appRouter,
 					transformer: superjson,
 					createContext: async () => {
-						// Get request headers including cookies for auth
 						const headers = new Headers(getRequestHeaders());
 						headers.set('x-trpc-source', 'tanstack-start-server');
 
-						// Fetch session from Better Auth using the request headers
-						const auth = createAuth(env);
-						const sessionData = await auth.api.getSession({
-							headers,
-							query: {
-								// Disable cookie cache to ensure fresh session data
-								disableCookieCache: true,
-							},
-						});
-
-						// Create database instance
-						const db = createDb(env.DB);
-
-						console.log('[TRPC] Server-side call via unstable_localLink', {
-							hasSession: !!sessionData?.session,
-							hasUser: !!sessionData?.user,
-							userId: sessionData?.user?.id,
-						});
+						const sessionData = await createAuth().api.getSession({ headers });
 
 						return createServerContext(
-							{
-								env,
-								cf: null,
-							},
+							{ cf: null },
 							sessionData?.session ?? null,
 							sessionData?.user ?? null,
 							headers,
-							db
+							createDb()
 						);
 					},
 				}),
@@ -84,7 +59,6 @@ export const makeTRPCClient = createIsomorphicFn()
 				httpBatchStreamLink({
 					transformer: superjson,
 					url: '/api/trpc',
-					// Include credentials (cookies) for auth
 					fetch: (url, options) =>
 						fetch(url, { ...options, credentials: 'include' }),
 					headers() {
