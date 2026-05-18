@@ -49,7 +49,8 @@ cp .dev.vars.example .dev.vars
 | :------------------- | :----------------------------------------------------------------------- |
 | `BETTER_AUTH_SECRET` | A random string used for encryption (e.g., `openssl rand -base64 32`).  |
 | `BETTER_AUTH_URL`    | Your deployment URL (optional — defaults to request origin in production). |
-| `SENTRY_DSN`         | Your Sentry DSN for error tracking (optional).                           |
+| `SENTRY_DSN`         | Your Sentry DSN for server-side error tracking (optional).               |
+| `VITE_SENTRY_DSN`    | Your Sentry DSN for browser error tracking (optional).                   |
 | `SENTRY_ORG`         | Your Sentry organization slug (optional, for source maps).               |
 | `SENTRY_PROJECT`     | Your Sentry project slug (optional, for source maps).                    |
 | `SENTRY_AUTH_TOKEN`  | Your Sentry auth token (optional, for source maps).                      |
@@ -59,11 +60,8 @@ cp .dev.vars.example .dev.vars
 We use Biome instead of ESLint and Prettier. It's faster and requires less configuration.
 
 ```bash
-# Check for issues
+# Check (and auto-fix) lint and format issues
 npm run check
-
-# Fix issues automatically
-npm run check:fix
 ```
 
 ### 3. Auth Configuration
@@ -91,7 +89,7 @@ npm install
 npm run dev
 ```
 
-Your app should now be running at `http://localhost:5173`.
+Your app should now be running at `http://localhost:3000`.
 
 ## Deployment
 
@@ -164,7 +162,8 @@ src/
 │   ├── db/          # Drizzle ORM schema and database client
 │   └── trpc/        # tRPC router and procedures
 ├── styles/          # Global CSS and theme files
-└── client.tsx       # Browser entry point
+├── client.tsx       # Browser entry point
+└── server.ts        # Cloudflare Worker entry (wraps the handler with Sentry)
 ```
 
 ## Inspiration

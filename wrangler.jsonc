@@ -14,7 +14,7 @@
 		// Better Auth settings
 		// BETTER_AUTH_URL should be set to the deployment URL (e.g., "https://your-app.workers.dev")
 		// For local dev, it will default to localhost
-		// "BETTER_AUTH_URL": "http://localhost:5173",
+		// "BETTER_AUTH_URL": "http://localhost:3000",
 		// Add your Sentry DSN here or via secrets: wrangler secret put SENTRY_DSN
 		// "SENTRY_DSN": "your-sentry-dsn"
 	},
