@@ -9,9 +9,11 @@ const startEntry = createServerEntry({
 	},
 });
 
-// Wrap with Sentry for error tracking and performance monitoring
+// Wrap with Sentry for error tracking and performance monitoring.
+// We use `Cloudflare.Env` (declaration-merged in env.d.ts + wrangler types)
+// rather than the global `Env` so user-augmented secrets are visible.
 export default withSentry(
-	(env: Env) => ({
+	(env: Cloudflare.Env) => ({
 		dsn: env.SENTRY_DSN,
 		// Use CF_VERSION_METADATA for release tracking
 		release: env.CF_VERSION_METADATA?.id,
@@ -21,10 +23,14 @@ export default withSentry(
 		enableLogs: true,
 	}),
 	{
-		async fetch(request: Request, _env: Env, _ctx: ExecutionContext) {
+		async fetch(
+			request: Request,
+			_env: Cloudflare.Env,
+			_ctx: ExecutionContext
+		) {
 			return startEntry.fetch(request, {
 				context: buildRequestContext(request),
 			});
 		},
-	} satisfies ExportedHandler<Env>
+	} satisfies ExportedHandler<Cloudflare.Env>
 );

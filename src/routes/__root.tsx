@@ -171,7 +171,15 @@ function Providers({ children }: { children: React.ReactNode }) {
 	return (
 		<MantineProvider theme={theme} defaultColorScheme="auto">
 			<ModalsProvider labels={{ confirm: 'Confirm', cancel: 'Cancel' }}>
-				<Notifications position="top-right" limit={3} zIndex={2000} />
+				<Notifications
+					position="top-right"
+					limit={3}
+					zIndex={2000}
+					// Mantine 9 changed the default so hovering any notification
+					// pauses *every* visible notification's auto-close timer.
+					// Restore 8.x behavior — only the hovered one pauses.
+					pauseResetOnHover="notification"
+				/>
 				<NavigationProgress size={2} color="teal" />
 				<AuthProvider session={session}>{children}</AuthProvider>
 			</ModalsProvider>

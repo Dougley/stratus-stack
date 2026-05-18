@@ -1,5 +1,5 @@
 import { cloudflare } from '@cloudflare/vite-plugin';
-import { sentryVitePlugin } from '@sentry/vite-plugin';
+import { sentryTanstackStart } from '@sentry/tanstackstart-react/vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
@@ -27,11 +27,17 @@ export default defineConfig({
 		cloudflare({ viteEnvironment: { name: 'ssr' } }),
 		tanstackStart(),
 		viteReact(),
-		sentryVitePlugin({
+		// Use the dedicated TanStack Start Sentry plugin (instead of the generic
+		// `@sentry/vite-plugin`) so that source maps are wired up correctly *and*
+		// TanStack Start middlewares get auto-instrumented for tracing.
+		// Must come last per Sentry docs.
+		sentryTanstackStart({
 			org: process.env.SENTRY_ORG,
 			project: process.env.SENTRY_PROJECT,
 			authToken: process.env.SENTRY_AUTH_TOKEN,
-			disable: !process.env.SENTRY_AUTH_TOKEN,
+			// Skip source-map upload entirely when no auth token is available
+			// (local dev, contributor PRs, etc.)
+			sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
 		}),
 	],
 });

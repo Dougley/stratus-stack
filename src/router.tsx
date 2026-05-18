@@ -1,5 +1,4 @@
 import { nprogress } from '@mantine/nprogress';
-import * as Sentry from '@sentry/tanstackstart-react';
 import { QueryClient } from '@tanstack/react-query';
 import { createRouter as createTanStackRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
@@ -58,43 +57,47 @@ export function getRouter() {
 	});
 
 	// Wire Mantine's NavigationProgress to TanStack Router navigation events.
-	// Client-only: the router emits these events in the browser; nprogress is a
-	// no-op during SSR but the subscribe call itself must be guarded.
-	if (!router.isServer) {
+	// `import.meta.env.SSR` is statically replaced by Vite so the SSR bundle
+	// tree-shakes both this and the Sentry block below — important because
+	// `Sentry.replayIntegration` doesn't exist in `@sentry/tanstackstart-react`'s
+	// server entry and would otherwise produce an `IMPORT_IS_UNDEFINED` warning.
+	if (!import.meta.env.SSR) {
 		router.subscribe('onBeforeLoad', ({ pathChanged }) => {
 			if (pathChanged) nprogress.start();
 		});
 		router.subscribe('onResolved', () => nprogress.complete());
-	}
 
-	// Initialize Sentry on client-side only
-	if (!router.isServer) {
-		Sentry.init({
-			dsn: import.meta.env.VITE_SENTRY_DSN,
+		// Browser-only Sentry initialization. Loaded via dynamic `import()` so
+		// the SSR bundle never sees `replayIntegration` (which is exported only
+		// by the package's `browser` condition).
+		void import('@sentry/tanstackstart-react').then((Sentry) => {
+			Sentry.init({
+				dsn: import.meta.env.VITE_SENTRY_DSN,
 
-			// Adds request headers and IP for users
-			sendDefaultPii: true,
+				// Adds request headers and IP for users
+				sendDefaultPii: true,
 
-			integrations: [
-				Sentry.tanstackRouterBrowserTracingIntegration(router),
-				Sentry.replayIntegration({
-					maskAllText: true,
-					blockAllMedia: true,
-				}),
-			],
+				integrations: [
+					Sentry.tanstackRouterBrowserTracingIntegration(router),
+					Sentry.replayIntegration({
+						maskAllText: true,
+						blockAllMedia: true,
+					}),
+				],
 
-			// Enable logs to be sent to Sentry
-			// (`_experiments.enableLogs` was removed in @sentry/* v10 — use top-level)
-			enableLogs: true,
+				// Enable logs to be sent to Sentry
+				// (`_experiments.enableLogs` was removed in @sentry/* v10 — use top-level)
+				enableLogs: true,
 
-			// Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing
-			// We recommend adjusting this value in production
-			tracesSampleRate: 1.0,
+				// Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing
+				// We recommend adjusting this value in production
+				tracesSampleRate: 1.0,
 
-			// Capture Replay for 10% of all sessions,
-			// plus for 100% of sessions with an error
-			replaysSessionSampleRate: 0.1,
-			replaysOnErrorSampleRate: 1.0,
+				// Capture Replay for 10% of all sessions,
+				// plus for 100% of sessions with an error
+				replaysSessionSampleRate: 0.1,
+				replaysOnErrorSampleRate: 1.0,
+			});
 		});
 	}
 

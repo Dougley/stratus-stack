@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
+import { drizzleAdapter } from '@better-auth/drizzle-adapter';
 import { getRequest } from '@tanstack/react-start/server';
 import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { anonymous } from 'better-auth/plugins';
 import { tanstackStartCookies } from 'better-auth/tanstack-start';
 import { withCloudflare } from 'better-auth-cloudflare';
@@ -26,7 +26,11 @@ export function createAuth() {
 	return betterAuth({
 		...withCloudflare(
 			{
-				kv: env.AUTH_KV,
+				// `withCloudflare` types its `kv` against the version of
+				// `@cloudflare/workers-types` it ships with internally, which
+				// drifts from the one generated locally by `wrangler types`.
+				// biome-ignore lint/suspicious/noExplicitAny: workers-types version drift
+				kv: env.AUTH_KV as any,
 				cf: cf ?? undefined,
 				autoDetectIpAddress: true,
 				geolocationTracking: true,
