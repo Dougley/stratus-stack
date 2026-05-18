@@ -1,7 +1,5 @@
 import type { TRPCRouterRecord } from '@trpc/server';
 
-import { protectedProcedure } from '../instance';
-
 /**
  * Auth router - add auth-related tRPC procedures here
  *
