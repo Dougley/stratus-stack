@@ -10,26 +10,36 @@ import {
 	TextInput,
 	Title,
 } from '@mantine/core';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import { useState } from 'react';
 
-// Get the route type for accessing context
-const Route = createFileRoute('/')();
+// `getRouteApi` is the canonical way to access a route's typed context/loader
+// from a component that lives outside that route file. Avoid the
+// `createFileRoute('/')()` invocation, which creates a brand-new orphan route
+// and only happens to work because the types overlap.
+const route = getRouteApi('/');
 
 export function NotesCard() {
 	const [newNote, setNewNote] = useState('');
-	const { trpc } = Route.useRouteContext();
+	const { trpc } = route.useRouteContext();
+	const queryClient = useQueryClient();
 
 	// Query to fetch all notes
 	const notesQuery = useQuery(trpc.notes.list.queryOptions());
+
+	// Invalidate the notes list cache after any mutation. `queryFilter()` is
+	// the documented v11 idiom — it produces a typed `{ queryKey, ... }`
+	// filter that scopes invalidation precisely to this procedure (and lets
+	// you narrow further with `predicate`/`exact` later if needed).
+	const invalidateNotes = () =>
+		queryClient.invalidateQueries(trpc.notes.list.queryFilter());
 
 	// Mutation to create a new note
 	const createMutation = useMutation(
 		trpc.notes.create.mutationOptions({
 			onSuccess: () => {
-				// Refetch notes after creating
-				notesQuery.refetch();
+				invalidateNotes();
 				setNewNote('');
 			},
 		})
@@ -38,10 +48,7 @@ export function NotesCard() {
 	// Mutation to delete a note
 	const deleteMutation = useMutation(
 		trpc.notes.delete.mutationOptions({
-			onSuccess: () => {
-				// Refetch notes after deleting
-				notesQuery.refetch();
-			},
+			onSuccess: invalidateNotes,
 		})
 	);
 
@@ -99,7 +106,7 @@ export function NotesCard() {
 					</Alert>
 				) : notesQuery.data && notesQuery.data.length > 0 ? (
 					<Stack gap="xs">
-						{notesQuery.data.map((note: { id: number; content: string }) => (
+						{notesQuery.data.map((note) => (
 							<Card key={note.id} withBorder p="sm">
 								<Group justify="space-between" align="flex-start">
 									<Text flex={1}>{note.content}</Text>
