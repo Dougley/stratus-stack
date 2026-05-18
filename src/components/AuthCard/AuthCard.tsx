@@ -8,23 +8,30 @@ import {
 	Text,
 	Title,
 } from '@mantine/core';
+import { useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useAuth } from '~/components/AuthContext';
 import { signIn, signOut } from '~/server/auth/client';
 
 export function AuthCard() {
 	const [isLoading, setIsLoading] = useState(false);
+	const router = useRouter();
 
 	// Get session from AuthContext (populated by beforeLoad in __root.tsx)
 	const { user, isAuthenticated } = useAuth();
+
+	// Re-run the root `beforeLoad` (which calls `getSessionFn`) so the new
+	// session shows up everywhere via context — no full page reload needed.
+	const refreshSession = () => router.invalidate();
 
 	const handleAnonymousLogin = async () => {
 		setIsLoading(true);
 		try {
 			await signIn.anonymous();
-			window.location.href = '/';
+			await refreshSession();
 		} catch (error) {
 			console.error('Anonymous sign in failed:', error);
+		} finally {
 			setIsLoading(false);
 		}
 	};
@@ -33,9 +40,10 @@ export function AuthCard() {
 		setIsLoading(true);
 		try {
 			await signOut();
-			window.location.href = '/';
+			await refreshSession();
 		} catch (error) {
 			console.error('Logout failed:', error);
+		} finally {
 			setIsLoading(false);
 		}
 	};
