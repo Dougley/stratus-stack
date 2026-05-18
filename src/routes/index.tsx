@@ -5,6 +5,15 @@ import { GettingStartedCard } from '~/components/GettingStartedCard';
 import { NotesCard } from '~/components/NotesCard';
 
 export const Route = createFileRoute('/')({
+	// Prefetch notes during SSR so the data streams to the client alongside
+	// the HTML. Without this, `useQuery` inside <NotesCard /> would only fire
+	// after hydration. `setupRouterSsrQueryIntegration` (in router.tsx) takes
+	// care of dehydrating/streaming the query result automatically.
+	loader: async ({ context }) => {
+		await context.queryClient.prefetchQuery(
+			context.trpc.notes.list.queryOptions()
+		);
+	},
 	component: LandingPage,
 });
 
