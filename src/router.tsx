@@ -73,9 +73,8 @@ export function getRouter() {
 			],
 
 			// Enable logs to be sent to Sentry
-			_experiments: {
-				enableLogs: true,
-			},
+			// (`_experiments.enableLogs` was removed in @sentry/* v10 — use top-level)
+			enableLogs: true,
 
 			// Set tracesSampleRate to 1.0 to capture 100% of transactions for tracing
 			// We recommend adjusting this value in production
