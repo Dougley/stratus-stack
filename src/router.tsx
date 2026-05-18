@@ -1,3 +1,4 @@
+import { nprogress } from '@mantine/nprogress';
 import * as Sentry from '@sentry/tanstackstart-react';
 import { QueryClient } from '@tanstack/react-query';
 import { createRouter as createTanStackRouter } from '@tanstack/react-router';
@@ -55,6 +56,16 @@ export function getRouter() {
 		router,
 		queryClient,
 	});
+
+	// Wire Mantine's NavigationProgress to TanStack Router navigation events.
+	// Client-only: the router emits these events in the browser; nprogress is a
+	// no-op during SSR but the subscribe call itself must be guarded.
+	if (!router.isServer) {
+		router.subscribe('onBeforeLoad', ({ pathChanged }) => {
+			if (pathChanged) nprogress.start();
+		});
+		router.subscribe('onResolved', () => nprogress.complete());
+	}
 
 	// Initialize Sentry on client-side only
 	if (!router.isServer) {
