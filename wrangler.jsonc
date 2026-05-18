@@ -3,7 +3,12 @@
 	"name": "stratus-stack-app",
 	"compatibility_date": "2025-09-24",
 	"compatibility_flags": ["nodejs_compat"],
-	"main": "@tanstack/react-start/server-entry",
+	// Point to our custom server entry (which wraps the TanStack Start handler
+	// with `@sentry/cloudflare`'s `withSentry` for server-side error tracking).
+	// The Cloudflare Vite plugin reads this `main` directly, so the default
+	// `@tanstack/react-start/server-entry` virtual module would bypass our
+	// wrapping silently.
+	"main": "src/server.ts",
 	"vars": {
 		"MY_VAR": "Hello from Cloudflare"
 		// Better Auth settings
