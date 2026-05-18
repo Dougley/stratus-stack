@@ -59,9 +59,10 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
  * Type-narrows the context to guarantee session and user exist.
  * Throws UNAUTHORIZED if no session is present.
  *
- * Note: This will NOT work with SSR prefetch via unstable_localLink
- * because localLink doesn't have access to cookies. Protected data
- * must be fetched client-side or passed from loaders.
+ * Works with SSR prefetch via `unstable_localLink` because that link's
+ * `createContext` reads request headers via `getRequestHeaders()` and
+ * resolves the session through Better Auth on every call — same as the
+ * HTTP route handler.
  */
 export const protectedProcedure = t.procedure
 	.use(timingMiddleware)
@@ -82,8 +83,3 @@ export const protectedProcedure = t.procedure
 			},
 		});
 	});
-
-// Legacy exports for backwards compatibility during migration
-export const router = t.router;
-export const mergeRouters = t.mergeRouters;
-export const createCallerFactory = t.createCallerFactory;

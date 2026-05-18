@@ -1,5 +1,5 @@
 import { createIsomorphicFn } from '@tanstack/react-start';
-import { getRequestHeaders } from '@tanstack/react-start/server';
+import { getRequest, getRequestHeaders } from '@tanstack/react-start/server';
 import {
 	createTRPCClient,
 	httpBatchStreamLink,
@@ -9,8 +9,6 @@ import {
 import { createTRPCContext } from '@trpc/tanstack-react-query';
 import superjson from 'superjson';
 
-import { createAuth } from '../auth';
-import { createDb } from '../db';
 import { createTRPCContext as createServerContext } from './context';
 import type { AppRouter } from './router';
 import { appRouter } from './router';
@@ -34,15 +32,17 @@ export const makeTRPCClient = createIsomorphicFn()
 						const headers = new Headers(getRequestHeaders());
 						headers.set('x-trpc-source', 'tanstack-start-server');
 
-						const sessionData = await createAuth().api.getSession({ headers });
+						// Pull Cloudflare request properties off the current Request
+						// so server-side SSR calls see the same `cf` data that HTTP
+						// calls do via the route's request middleware.
+						const cf =
+							(
+								getRequest() as Request & {
+									cf?: IncomingRequestCfProperties;
+								}
+							).cf ?? null;
 
-						return createServerContext(
-							{ cf: null },
-							sessionData?.session ?? null,
-							sessionData?.user ?? null,
-							headers,
-							createDb()
-						);
+						return createServerContext({ headers, cf });
 					},
 				}),
 			],
@@ -58,9 +58,9 @@ export const makeTRPCClient = createIsomorphicFn()
 				}),
 				httpBatchStreamLink({
 					transformer: superjson,
+					// Same-origin relative URL — cookies are sent by default, so we
+					// don't need a custom `fetch` with `credentials: 'include'`.
 					url: '/api/trpc',
-					fetch: (url, options) =>
-						fetch(url, { ...options, credentials: 'include' }),
 					headers() {
 						const headers = new Headers();
 						headers.set('x-trpc-source', 'tanstack-start-client');
@@ -71,5 +71,12 @@ export const makeTRPCClient = createIsomorphicFn()
 		});
 	});
 
-// Re-export the TRPC context hook and provider for use in components
-export const { useTRPC, TRPCProvider } = createTRPCContext<AppRouter>();
+// Re-export the TRPC context hook and provider for use in components.
+//
+// `useTRPCClient` is included so components can fall back to imperative,
+// outside-of-react-query calls when needed (e.g. in event handlers):
+//
+//     const trpcClient = useTRPCClient();
+//     const data = await trpcClient.notes.list.query();
+export const { useTRPC, useTRPCClient, TRPCProvider } =
+	createTRPCContext<AppRouter>();
